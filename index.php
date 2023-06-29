@@ -12,21 +12,44 @@ if ($route == "") {
     die();
 }
 
-$routes = ['pays', 'contacts', 'cities'];
+$routes = ['pays', 'contacts', 'cities', 'users'];
 
 if (!in_array($route, $routes)) {
     $response['message'] = "Access denied2";
     $response['code'] = "Pas ok";
     $response['file'] = "index.php";
+    http_response_code(404);
     echo json_encode($response);
     die();
 }
 
+// Get all the data from any table
 if ($_SERVER['REQUEST_METHOD'] == "GET") {
-
     $sql = "SELECT * FROM $route";
+    $args = [];
+    $i = 0;
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (isset($data['search'])) {
+        $data = $data['search'];
+        if (isset($data['operator'])) {
+            $operator = $data['operator'];
+            unset($data['operator']);
+        }else{
+            $operator = "AND";
+        }
+        foreach ($data as $field => $value) {
+            ($i == 0) ?
+                $sql .= " WHERE $field LIKE :$field"
+                :
+                $sql .= " $operator $field LIKE :$field";
+            $args[$field] = is_int($value)? $value :"%".$value."%";
+            $i++;
+        }
+    }
+
     $req = $conn->prepare($sql);
-    $req->execute();
+    $req->execute($args);
 
     $usersCount = $req->rowCount();
     $users = $req->fetchAll();
@@ -75,11 +98,18 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     } else {
         $response['message'] = "Erreur";
         $response['code'] = "Code d'erreur";
+        http_response_code(500);
     }
 }
 
 // Delete any row from any table
 if ($_SERVER['REQUEST_METHOD'] == "DELETE") {
+    if (!isset($_GET['id'])) {
+        $response['message'] = "Il manque l'id";
+        $response['code'] = "Code d'erreur";
+        http_response_code(400);
+        die();
+    };
     $sql = "DELETE FROM $route WHERE id = :id";
     $req = $conn->prepare($sql);
     $req->execute(['id' => $_GET['id']]);
@@ -95,11 +125,18 @@ if ($_SERVER['REQUEST_METHOD'] == "DELETE") {
     } else {
         $response['message'] = "Erreur";
         $response['code'] = "Code d'erreur";
+        http_response_code(500);
     }
 }
 
 // Update any row from any table
-if ($_SERVER['REQUEST_METHOD'] == "PATCH") {
+if ($_SERVER['REQUEST_METHOD'] == "PUT") {
+    if (!isset($_GET['id'])) {
+        $response['message'] = "Il manque l'id";
+        $response['code'] = "Code d'erreur";
+        http_response_code(400);
+        die();
+    };
     $data = json_decode(file_get_contents('php://input'), true);
     unset($data['token']);
     $sql = "UPDATE $route SET ";
@@ -131,6 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] == "PATCH") {
     } else {
         $response['message'] = "Erreur";
         $response['code'] = "Code d'erreur";
+        http_response_code(500);
     }
 }
 

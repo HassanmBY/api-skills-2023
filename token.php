@@ -27,6 +27,7 @@ if ($tokenErr == true) {
     $response['code'] = "Pas Ok";
     $response['file'] = "token.php";
     echo json_encode($response);
+    http_response_code(403);
     die();
 }
 

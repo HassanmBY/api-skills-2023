@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
             $user = $req->fetchObject();
             $_SESSION['user_id'] = $user->id;
             $_SESSION['token'] = md5(date("DdMyHis"));
-            $_SESSION['expiration'] = time() + 1 * 300;
+            $_SESSION['expiration'] = time() + 1 * 600;
 
             $response['token'] = $_SESSION['token'];
             $response['message'] = "Connecté";
