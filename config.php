@@ -25,6 +25,8 @@
             DB_PASS,
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
+    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+    $conn->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
     } catch (Exception $e) {
         die('Error : ' . $e->getMessage());
     }

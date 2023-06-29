@@ -29,6 +29,8 @@ if ($tokenErr == true) {
     echo json_encode($response);
     http_response_code(403);
     die();
+}else{
+    $_SESSION['expiration'] = time() + 1 * 300;
 }
 
 // Expired ?

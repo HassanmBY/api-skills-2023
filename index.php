@@ -1,4 +1,6 @@
 <?php
+
+
 require_once("config.php");
 require_once("headers.php");
 
@@ -29,13 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] == "GET") {
     $args = [];
     $i = 0;
     $data = json_decode(file_get_contents('php://input'), true);
-    
+
     if (isset($data['search'])) {
         $data = $data['search'];
         if (isset($data['operator'])) {
             $operator = $data['operator'];
             unset($data['operator']);
-        }else{
+        } else {
             $operator = "AND";
         }
         foreach ($data as $field => $value) {
@@ -43,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] == "GET") {
                 $sql .= " WHERE $field LIKE :$field"
                 :
                 $sql .= " $operator $field LIKE :$field";
-            $args[$field] = is_int($value)? $value :"%".$value."%";
+            $args[$field] = is_int($value) ? $value : "%" . $value . "%";
             $i++;
         }
     }
@@ -57,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] == "GET") {
     if ($users > 0) {
         $response['content'] = $users;
         $response['message'] = "Liste $route";
-        $response["code"] = 'Ok';
+        $response["code"] = 'ok';
         $response['nbhits'] = $usersCount;
     } else {
         $response['message'] = "Pas de réponse";
@@ -105,23 +107,41 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 // Delete any row from any table
 if ($_SERVER['REQUEST_METHOD'] == "DELETE") {
     if (!isset($_GET['id'])) {
-        $response['message'] = "Il manque l'id";
-        $response['code'] = "Code d'erreur";
-        http_response_code(400);
-        die();
-    };
-    $sql = "DELETE FROM $route WHERE id = :id";
+        $data = json_decode(file_get_contents('php://input'), true);
+        unset($data['token']);
+        $data = array_values($data['delete']);
+        $sql = "DELETE FROM $route WHERE id IN (";
+        $i = 0;
+
+        foreach ($data as $value) {
+            if ($i <= count($data) - 1) {
+                $sql .= ":id$i, ";
+                $args["id$i"] = intval($value);
+            }
+            $i++;
+        }
+
+        $sql = rtrim($sql, ", ");
+        $sql .= ")";
+    } else {
+        $sql = "DELETE FROM $route WHERE id = :id";
+        $args = ['id' => $_GET['id']];
+    }
+
     $req = $conn->prepare($sql);
-    $req->execute(['id' => $_GET['id']]);
+    $req->execute($args);
     $nb_hits = $req->rowCount();
 
-    // myPrint_r($sql);
+
 
     if ($nb_hits > 0) {
-        $response['message'] = "$route.id=>{$_GET['id']} supprimé";
+        if ($nb_hits > 1) {
+            $response['message'] = "Elements supprimés: " . implode(",", $args);
+        } else {
+            $response['message'] = "$route.id=>{$_GET['id']} supprimé";
+        }
         $response['code'] = "Ok";
         $response['nbhits'] = $nb_hits;
-        $response['id'] = $_GET['id'];
     } else {
         $response['message'] = "Erreur";
         $response['code'] = "Code d'erreur";
